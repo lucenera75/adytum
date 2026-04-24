@@ -50,12 +50,20 @@ Existing solutions fall short:
 
 | Solution | Code is private | Integrity provable | Access gated on-chain | Author pseudonymous | Uncensorable |
 |---|:---:|:---:|:---:|:---:|:---:|
-| IPFS + ENS | ✗ | ✓ (CID) | ✗ | ✗ | ~ |
-| Arweave permaweb | ✗ | ✓ (txid) | ✗ | ~ | ✓ |
+| IPFS + ENS | ✗ | ✓ (CID) | ✗ | ✓✓ (no authorship recorded) | ~ |
+| Arweave permaweb | ✗ | ✓ (txid) | ✗ | ~ (address on-chain) | ✓ |
 | Centralised hosting | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **Adytum (public mode)** | ✗ | ✓ | ✓ | ✓ | ✓ |
-| **Adytum (private mode)** | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Adytum (public mode)** | ✗ | ✓ | ✓ | ~ (address on-chain) | ✓ |
+| **Adytum (private mode)** | ✓ | ✓ | ✓ | ~ (address on-chain) | ✓ |
 
+> **Author anonymity note:** IPFS does not record authorship at the protocol level — a CID identifies content,
+> not a publisher. Uploading via a pinning service over Tor leaves no on-chain or protocol-level identity trail,
+> making IPFS the strongest option for author anonymity on *public* code. Arweave and Adytum both require a
+> signed transaction, so the uploader's address is always on-chain; pseudonymity depends on how the funding
+> key was obtained. For **private** dapps, IPFS and Arweave cannot keep the code confidential regardless of
+> anonymity measures, so Adytum with encrypted bundles is the only complete solution — and the pseudonymous
+> deployment pattern (`--anonymous`) provides the best available anonymity within that constraint.
+>
 > **Note on public dapps:** For dapps that do not require code privacy, the hybrid approach of storing blobs
 > on IPFS or Arweave and publishing only `(name, version, content_hash, storage_ref)` on-chain is cheaper and
 > equally correct. Adytum's on-chain encrypted storage is justified specifically when the frontend code itself
@@ -405,8 +413,11 @@ users to install a browser extension and manage permissions manually. A browser 
 
 **Public dapps and the hybrid approach:** For dapps that do not require code privacy, publishing only
 `(name, version, content_hash, arweave_txid)` on-chain and serving blobs from IPFS or Arweave is cheaper
-with equivalent integrity guarantees. Adytum's on-chain encrypted storage is the right choice when the
-frontend code itself must be confidential.
+with equivalent integrity guarantees. If author anonymity is also a goal for a public dapp, IPFS is the
+strongest option — it records no authorship at the protocol level, whereas both Arweave and Adytum leave a
+signed transaction (and thus an on-chain address) as a permanent record. Adytum's on-chain encrypted storage
+is the right choice when the frontend code itself must be confidential; the `--anonymous` deployment flag
+provides pseudonymity within that constraint.
 
 ---
 
