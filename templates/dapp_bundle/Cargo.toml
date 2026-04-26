@@ -1,0 +1,13 @@
+[workspace]
+[package]
+name = "dapp_bundle"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tari_template_lib = "0.24.0"
+tari_template_abi = "0.16"
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
+
+[lib]
+crate-type = ["cdylib", "lib"]

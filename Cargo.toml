@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "templates/dapp_bundle",
+    "templates/dapp_registry",
+]
+resolver = "2"
