@@ -1,4 +1,3 @@
-[workspace]
 [package]
 name = "dapp_registry"
 version = "0.1.0"

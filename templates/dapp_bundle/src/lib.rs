@@ -52,6 +52,42 @@ mod dapp_bundle {
     }
 
     impl DappBundle {
+        /// Deploy a public (unencrypted) bundle owned by the given public key.
+        /// Convenience constructor for use from the CLI / manifest DSL where passing a full
+        /// `NonFungibleAddress` is awkward.  The owner badge is derived from `owner_pubkey` via
+        /// `NonFungibleAddress::from_public_key`.
+        pub fn new_public(
+            owner_pubkey: RistrettoPublicKeyBytes,
+            name: String,
+            version: String,
+            content_type: String,
+        ) -> Component<Self> {
+            let owner_badge = NonFungibleAddress::from_public_key(owner_pubkey);
+            Self::new(owner_badge, name, version, content_type, rule!(allow_all), None)
+        }
+
+        /// Deploy a badge-gated, encrypted bundle owned by the given public key.
+        /// `get_chunk` is restricted to badge holders; chunks are expected to be
+        /// ChaCha20-Poly1305 ciphertext with per-holder ECIES-wrapped keys stored
+        /// via `grant_access`.
+        pub fn new_encrypted(
+            owner_pubkey: RistrettoPublicKeyBytes,
+            name: String,
+            version: String,
+            content_type: String,
+        ) -> Component<Self> {
+            let owner_badge = NonFungibleAddress::from_public_key(owner_pubkey);
+            let access_rule = rule!(non_fungible(owner_badge.clone()));
+            Self::new(
+                owner_badge,
+                name,
+                version,
+                content_type,
+                access_rule,
+                Some(ENCRYPTION_SCHEME.to_string()),
+            )
+        }
+
         /// Deploy an empty bundle. Call `upload_chunk` repeatedly, then `publish`.
         ///
         /// - `access_rule`: `rule!(allow_all)` for a public dapp;
