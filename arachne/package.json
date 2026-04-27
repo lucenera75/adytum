@@ -1,0 +1,30 @@
+{
+  "name": "arachne",
+  "version": "0.1.0",
+  "description": "Ootle dapp browser — resolves ootle:// URLs and executes sandboxed dapp bundles",
+  "main": "main/index.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac --win --linux"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "org.adytum.arachne",
+    "productName": "Arachne",
+    "protocols": [
+      {
+        "name": "Ootle Protocol",
+        "schemes": ["ootle"]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.utilities"
+    }
+  }
+}

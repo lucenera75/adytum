@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Arachne</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Chrome bar -->
+  <div id="chrome">
+    <button class="nav-btn" id="btn-back"    title="Back"    disabled>&#8592;</button>
+    <button class="nav-btn" id="btn-forward" title="Forward" disabled>&#8594;</button>
+
+    <div id="address-bar">
+      <span id="scheme-label">ootle://</span>
+      <input id="address-input" type="text" spellcheck="false"
+             placeholder="my-dapp  or  component_3af8…" autocomplete="off">
+      <div id="status-dot" title=""></div>
+    </div>
+
+    <button id="settings-btn" title="Settings">&#9881;</button>
+  </div>
+
+  <!-- Loading bar -->
+  <div id="progress-bar"></div>
+
+  <!-- Settings panel -->
+  <div id="settings-panel">
+    <div class="setting-row">
+      <label class="setting-label">Wallet daemon URL</label>
+      <input class="setting-input" id="cfg-daemon-url" placeholder="http://localhost:5100/json_rpc">
+    </div>
+    <div class="setting-row">
+      <label class="setting-label">DappRegistry address</label>
+      <input class="setting-input" id="cfg-registry" placeholder="component_…">
+    </div>
+    <div class="setting-row">
+      <label class="setting-label">Max fee (microtari)</label>
+      <input class="setting-input" id="cfg-max-fee" placeholder="10000" type="number">
+    </div>
+    <button class="settings-save" id="cfg-save">Save</button>
+  </div>
+
+  <!-- Content area -->
+  <div id="content">
+    <!-- Welcome / error overlay -->
+    <div id="overlay">
+      <div class="overlay-icon">🕸</div>
+      <div class="overlay-title">Arachne</div>
+      <div class="overlay-body">Enter an <strong>ootle://</strong> address above to load a dapp.</div>
+    </div>
+
+    <!-- Sandboxed dapp iframe -->
+    <iframe id="sandbox"
+            sandbox="allow-scripts"
+            referrerpolicy="no-referrer"
+            allow=""
+            title="Dapp sandbox"></iframe>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
