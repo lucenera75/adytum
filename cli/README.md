@@ -39,6 +39,18 @@ Config is saved to `~/.adytum/config.toml`. All values can also be supplied as e
 | `ADYTUM_DAEMON_URL` | Wallet daemon JSON-RPC URL |
 | `ADYTUM_BUNDLE_TEMPLATE` | DappBundle template address (hex) |
 | `ADYTUM_REGISTRY` | DappRegistry component address |
+| `ADYTUM_IPFS_API` | Local Kubo/IPFS API URL (e.g. `http://127.0.0.1:5001`) |
+| `ADYTUM_PINATA_JWT` | Pinata JWT for cloud IPFS pinning |
+
+To save IPFS settings permanently:
+
+```bash
+# Local Kubo node
+adytum config --ipfs-api http://127.0.0.1:5001
+
+# Or Pinata
+adytum config --pinata-jwt <your-jwt>
+```
 
 ### 2. Deploy
 
@@ -72,6 +84,8 @@ adytum deploy <dist> [OPTIONS]
 | `--private` | off | Encrypt the bundle (badge-gated, ChaCha20-Poly1305 + ECIES) |
 | `--immutable` | off | Permanently lock the bundle after publishing |
 | `--max-fee <n>` | `10000` | Maximum transaction fee in microtari |
+| `--also-ipfs` | off | Also pin the bundle ZIP to IPFS after on-chain deploy |
+| `--ipfs-only` | off | Pin to IPFS only — skip on-chain deployment entirely |
 
 #### Public dapp
 
@@ -94,6 +108,28 @@ Once published with `--immutable`, no one — not even the deployer — can chan
 ```bash
 adytum deploy ./dist --name my-dapp --immutable
 ```
+
+#### IPFS publishing
+
+Optionally pin the bundle ZIP to IPFS alongside (or instead of) the on-chain deploy. IPFS records no authorship at the protocol level — the CID is purely content-derived.
+
+**Also publish to IPFS** (on-chain + IPFS):
+
+```bash
+# Using a local Kubo node
+adytum deploy ./dist --name my-dapp --also-ipfs --ipfs-api http://127.0.0.1:5001
+
+# Using Pinata cloud
+adytum deploy ./dist --name my-dapp --also-ipfs --pinata-jwt <your-jwt>
+```
+
+**IPFS only** (no on-chain transaction):
+
+```bash
+adytum deploy ./dist --name my-dapp --ipfs-only --ipfs-api http://127.0.0.1:5001
+```
+
+The CID printed by `--ipfs-only` or `--also-ipfs` is a permanent, immutable content address. Pin it on additional nodes or gateways to improve availability.
 
 ---
 

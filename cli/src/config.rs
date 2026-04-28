@@ -7,6 +7,8 @@ pub struct Config {
     pub daemon_url: Option<String>,
     pub bundle_template: Option<String>,
     pub registry_address: Option<String>,
+    pub ipfs_api: Option<String>,
+    pub pinata_jwt: Option<String>,
 }
 
 impl Config {

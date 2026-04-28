@@ -1,4 +1,4 @@
-use crate::{bundle::Bundle, manifest, wallet::WalletClient};
+use crate::{bundle::Bundle, ipfs::{IpfsClient, IpfsMode}, manifest, wallet::WalletClient};
 use anyhow::{anyhow, Context, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::{collections::HashMap, path::PathBuf};
@@ -13,6 +13,7 @@ pub struct DeployArgs {
     pub bundle_template: String,
     pub registry_address: Option<String>,
     pub max_fee: u64,
+    pub ipfs_mode: Option<IpfsMode>,
 }
 
 pub async fn run(args: DeployArgs, client: &mut WalletClient) -> Result<String> {
@@ -98,6 +99,19 @@ pub async fn run(args: DeployArgs, client: &mut WalletClient) -> Result<String> 
             .await
             .context("Registry register transaction failed")?;
         println!("Registered   : ootle://{}", args.name);
+    }
+
+    // ── 8. Pin to IPFS (optional) ─────────────────────────────────────────────
+    if let Some(mode) = args.ipfs_mode {
+        let client = IpfsClient::new(mode);
+        let filename = format!("{}-{}.zip", args.name, args.version);
+        println!("IPFS         : pinning bundle…");
+        let cid = client
+            .pin(bundle.bytes.clone(), &filename)
+            .await
+            .context("IPFS pinning failed")?;
+        println!("IPFS CID     : {cid}");
+        println!("Gateway      : https://ipfs.io/ipfs/{cid}");
     }
 
     println!("Done         : ootle://component_{}", &bundle_address[10..]);

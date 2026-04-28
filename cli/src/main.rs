@@ -1,6 +1,7 @@
 mod bundle;
 mod commands;
 mod config;
+mod ipfs;
 mod manifest;
 mod wallet;
 
@@ -23,6 +24,14 @@ struct Cli {
     /// DappRegistry component address.
     #[arg(long, env = "ADYTUM_REGISTRY", global = true)]
     registry: Option<String>,
+
+    /// Local IPFS/Kubo API URL (e.g. http://127.0.0.1:5001). Overrides config.
+    #[arg(long, env = "ADYTUM_IPFS_API", global = true)]
+    ipfs_api: Option<String>,
+
+    /// Pinata JWT for IPFS pinning. Overrides config.
+    #[arg(long, env = "ADYTUM_PINATA_JWT", global = true)]
+    pinata_jwt: Option<String>,
 
     #[command(subcommand)]
     command: Command,
@@ -58,6 +67,14 @@ enum Command {
         /// Maximum transaction fee in microtari.
         #[arg(long, default_value_t = 10_000)]
         max_fee: u64,
+
+        /// Also publish the bundle ZIP to IPFS (requires --ipfs-api or --pinata-jwt).
+        #[arg(long)]
+        also_ipfs: bool,
+
+        /// Publish to IPFS only — skip on-chain deployment entirely.
+        #[arg(long, conflicts_with = "also_ipfs")]
+        ipfs_only: bool,
     },
 
     /// Register an existing DappBundle component under a name in the registry.
@@ -94,6 +111,12 @@ enum Command {
         bundle_template: Option<String>,
         #[arg(long)]
         registry: Option<String>,
+        /// Local IPFS/Kubo API URL.
+        #[arg(long)]
+        ipfs_api: Option<String>,
+        /// Pinata JWT for IPFS pinning.
+        #[arg(long)]
+        pinata_jwt: Option<String>,
     },
 }
 
@@ -108,6 +131,10 @@ async fn main() -> Result<()> {
         .or_else(|| cfg.bundle_template.clone());
     let registry = cli.registry.or_else(|| cfg.registry_address.clone());
 
+    // Resolve IPFS config: CLI flags > saved config
+    let ipfs_api  = cli.ipfs_api.or_else(|| cfg.ipfs_api.clone());
+    let pinata_jwt = cli.pinata_jwt.or_else(|| cfg.pinata_jwt.clone());
+
     let mut wallet = WalletClient::new(&daemon_url);
 
     match cli.command {
@@ -119,28 +146,49 @@ async fn main() -> Result<()> {
             private,
             immutable,
             max_fee,
+            also_ipfs,
+            ipfs_only,
         } => {
-            let template = bundle_template.ok_or_else(|| {
-                anyhow::anyhow!(
-                    "DappBundle template address is required. Pass --bundle-template or set \
-                     ADYTUM_BUNDLE_TEMPLATE, or save it with `adytum config --bundle-template <addr>`."
+            let ipfs_mode = resolve_ipfs_mode(ipfs_api, pinata_jwt, also_ipfs || ipfs_only)?;
+
+            if !ipfs_only {
+                let template = bundle_template.ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "DappBundle template address is required. Pass --bundle-template or set \
+                         ADYTUM_BUNDLE_TEMPLATE, or save it with `adytum config --bundle-template <addr>`."
+                    )
+                })?;
+                commands::deploy::run(
+                    commands::deploy::DeployArgs {
+                        dist_dir: dist.clone(),
+                        name: name.clone(),
+                        version: version.clone(),
+                        content_type: content_type.clone(),
+                        encrypted: private,
+                        immutable,
+                        bundle_template: template,
+                        registry_address: registry,
+                        max_fee,
+                        ipfs_mode: if also_ipfs { ipfs_mode } else { None },
+                    },
+                    &mut wallet,
                 )
-            })?;
-            commands::deploy::run(
-                commands::deploy::DeployArgs {
-                    dist_dir: dist,
-                    name,
-                    version,
-                    content_type,
-                    encrypted: private,
-                    immutable,
-                    bundle_template: template,
-                    registry_address: registry,
-                    max_fee,
-                },
-                &mut wallet,
-            )
-            .await?;
+                .await?;
+            } else {
+                // IPFS-only: just bundle and pin
+                let b = bundle::Bundle::from_dir(&dist)?;
+                let mode = ipfs_mode.ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "--ipfs-only requires an IPFS backend. Pass --ipfs-api or --pinata-jwt."
+                    )
+                })?;
+                let client = ipfs::IpfsClient::new(mode);
+                let filename = format!("{name}-{version}.zip");
+                eprintln!("Pinning bundle to IPFS…");
+                let cid = client.pin(b.bytes.clone(), &filename).await?;
+                println!("ipfs://{cid}");
+                println!("https://ipfs.io/ipfs/{cid}");
+            }
         },
 
         Command::Register { bundle, name, max_fee } => {
@@ -165,21 +213,41 @@ async fn main() -> Result<()> {
             daemon_url,
             bundle_template,
             registry,
+            ipfs_api,
+            pinata_jwt,
         } => {
             let mut cfg = Config::load()?;
-            if let Some(u) = daemon_url {
-                cfg.daemon_url = Some(u);
-            }
-            if let Some(t) = bundle_template {
-                cfg.bundle_template = Some(t);
-            }
-            if let Some(r) = registry {
-                cfg.registry_address = Some(r);
-            }
+            if let Some(u) = daemon_url      { cfg.daemon_url        = Some(u); }
+            if let Some(t) = bundle_template { cfg.bundle_template   = Some(t); }
+            if let Some(r) = registry        { cfg.registry_address  = Some(r); }
+            if let Some(a) = ipfs_api        { cfg.ipfs_api          = Some(a); }
+            if let Some(j) = pinata_jwt      { cfg.pinata_jwt        = Some(j); }
             cfg.save()?;
             println!("Config saved to {}", Config::path().display());
         },
     }
 
     Ok(())
+}
+
+/// Returns `Some(IpfsMode)` when IPFS is requested, `None` when it isn't,
+/// and an error when IPFS is requested but no backend is configured.
+fn resolve_ipfs_mode(
+    ipfs_api: Option<String>,
+    pinata_jwt: Option<String>,
+    requested: bool,
+) -> Result<Option<ipfs::IpfsMode>> {
+    if !requested {
+        return Ok(None);
+    }
+    if let Some(jwt) = pinata_jwt {
+        return Ok(Some(ipfs::IpfsMode::Pinata { jwt }));
+    }
+    if let Some(api_url) = ipfs_api {
+        return Ok(Some(ipfs::IpfsMode::Local { api_url }));
+    }
+    anyhow::bail!(
+        "IPFS publishing requires a backend. Pass --ipfs-api <url> (local Kubo node) \
+         or --pinata-jwt <token> (Pinata cloud), or save them with `adytum config`."
+    );
 }
