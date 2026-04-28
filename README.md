@@ -13,6 +13,15 @@ No badge, no code — not just no interaction with the contract.
 - **`adytum` CLI** — zips your dist directory, uploads it in chunks, and manages the full lifecycle from deploy to registry registration.
 - **Arachne** — an Electron browser that resolves `ootle://` URLs, verifies the SHA-256 content hash, decrypts if needed, and executes the bundle in a sandboxed JS environment. The dapp JS never touches private keys.
 
+## Components
+
+| Component | Description | Docs |
+|---|---|---|
+| `templates/dapp_bundle` | On-chain chunked bundle storage with access control | [OIP-0003](proposals/OIP-0003-adytum-on-chain-dapp-hosting.md) |
+| `templates/dapp_registry` | Human-readable name → component address registry | [OIP-0003](proposals/OIP-0003-adytum-on-chain-dapp-hosting.md) |
+| `cli` | Deploy and manage bundles from the command line | [cli/README.md](cli/README.md) |
+| `arachne` | Electron browser for `ootle://` URLs | [arachne/README.md](arachne/README.md) |
+
 ## CLI
 
 ### Install
